@@ -17,7 +17,7 @@ Error getError(double** accurateMatrix, double** approximatedMatrix, size_t rows
 
 int main(int argc, char *argv[])
 {
-	ApproximationObj approxObj(1, -1, 1);
+	ApproximationObj approxObj(1, -0.75, 1);
 	size_t xIterations, tIterations;
 
 	std::cout << "Enter x iterations: ";
@@ -25,8 +25,8 @@ int main(int argc, char *argv[])
 	std::cout << "Enter t iterations: ";
 	std::cin >> tIterations;
 
-	double tauStep = 1.0 / (tIterations);
-	double hStep = 1.0 / (xIterations);
+	double tauStep = 1.0 / (tIterations - 1);
+	double hStep = 1.0 / (xIterations - 1);
 
 	double** accurateMatrix = new double*[tIterations];
 	double** approximateMatrix = new double*[tIterations];
@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
 				currentX = hStep * j;
 				accurateMatrix[i][j] = approxObj.getAccurate(currentX, currentT);
 				//std::cout << accurateMatrix[i][j] << " ";
-				AccurateFile << accurateMatrix[i][j] << " ";
+				AccurateFile << "{" << currentX << ", " << currentT << ", " << accurateMatrix[i][j] << "}," << "\n";
+				//AccurateFile << accurateMatrix[i][j] << " ";
 			}
 		}
 		AccurateFile.close();
@@ -65,27 +66,48 @@ int main(int argc, char *argv[])
 		currentT += tauStep;
 	}
 
-	currentX += hStep;
+	//currentX += hStep;
 	for (size_t i = 1; i < xIterations - 1; ++i) {
 		approximateMatrix[0][i] = approxObj.bottomLimit(currentX);
 		currentX += hStep;
 	}
 
-	std::ofstream ApproximateFile("Approximate Matrix.txt");
-	if (ApproximateFile.is_open())
-	{
+	currentX = 0;
+	currentT = 0;
 		std::cout << std::endl << "Approximate Matrix is in file: Approximate Matrix.txt" << std::endl;
 		for (size_t i = 1; i < tIterations; ++i) {
+			currentX = 0;
 #pragma omp paralel for
 			for (size_t j = 1; j < xIterations - 1; ++j) {
 				approximateMatrix[i][j] = approxObj.getApproximation(approximateMatrix[i - 1][j - 1], approximateMatrix[i - 1][j + 1], approximateMatrix[i - 1][j], tauStep, hStep);
 				//std::cout << approximateMatrix[i][j] << " ";
-				ApproximateFile << approximateMatrix[i][j] << " ";
+				currentX += hStep;
 			}
+			currentT += tauStep;
+		}
+
+
+	std::ofstream ApproximateFile("Approximate Matrix.txt");
+	currentX = 0;
+	currentT = 0;
+	if (ApproximateFile.is_open())
+	{
+		std::cout << std::endl << "Approximate Matrix is in file: Approximate Matrix.txt" << std::endl;
+		for (size_t i = 1; i < tIterations; ++i) {
+			currentX = 0;
+
+			for (size_t j = 0; j < xIterations; ++j) {
+				
+				//std::cout << approximateMatrix[i][j] << " ";
+				ApproximateFile << "{" << currentX << ", " << currentT << ", " << approximateMatrix[i][j] << "}," << "\n";
+				currentX += hStep;
+			}
+			currentT += tauStep;
 		}
 		ApproximateFile.close();
 	}
 	else std::cout << "Unable to open file";
+
 
 	Error error = getError(accurateMatrix, approximateMatrix, tIterations, xIterations);
 	std::cout << std::endl;

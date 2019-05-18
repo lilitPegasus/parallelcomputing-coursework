@@ -8,7 +8,7 @@ double ApproximationObj::getApproximation(const double omegaLeft, const double o
 
 double ApproximationObj::getAccurate(double aX, double aT)
 {
-	double x = pow(sqrt(-b / a) + c * std::exp((8.0 * a * aT) / 12.0 + sqrt(4.0 * a / 12.0) * aX), - 0.5);
+	double x = pow(sqrt(-b / a) + c * std::exp((8.0 * a * aT) / 3.0 + sqrt((4.0 * a) / 3.0) * aX), - 0.5);
 	return x;
 }
 
