@@ -4,6 +4,15 @@
 #include <vector>
 #include <omp.h>
 
+struct Error
+{
+	double absolute, relative;
+	size_t row, col;
+
+	Error() : absolute(0), relative(0) {}
+};
+
+Error getError(double** accurateMatrix, double** approximatedMatrix, size_t rows, size_t columns);
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +27,6 @@ int main(int argc, char *argv[])
 	double tauStep = 1.0 / (tIterations);
 	double hStep = 1.0 / (xIterations);
 
-	
 	double** accurateMatrix = new double*[tIterations];
 	double** approximatedMatrix = new double*[tIterations];
 	for (size_t i = 0; i < tIterations; ++i) {
@@ -28,7 +36,7 @@ int main(int argc, char *argv[])
 
 	double currentX = 0, currentT = 0;
 
-	std::cout << std::endl << " Accurate Matrix" << std::endl;
+	std::cout << std::endl << "Accurate Matrix" << std::endl;
 	#pragma omp parallel for private(currentX, currentT)
 	for (size_t i = 0; i < tIterations; ++i) {
 		currentT = tauStep * i;
@@ -54,18 +62,36 @@ int main(int argc, char *argv[])
 		currentX += hStep;
 	}
 
-	std::cout << std::endl << " Approximated Matrix" << std::endl;
+	std::cout << std::endl << "Approximated Matrix" << std::endl;
 	for (size_t i = 1; i < tIterations; ++i) {
 	#pragma omp paralel for
 		for (size_t j = 1; j < xIterations - 1; ++j) {
 			approximatedMatrix[i][j] = approxObj.getApproximation(approximatedMatrix[i - 1][j - 1], approximatedMatrix[i - 1][j + 1], approximatedMatrix[i - 1][j], tauStep, hStep);
 			std::cout << approximatedMatrix[i][j] << " ";
+			
 		}
 	}
 
-	system("pause");
+Error error = getError(accurateMatrix, approximatedMatrix, tIterations, xIterations);
+	std::cout << std::endl;
+	std::cout << "Absolute error: " << " i [" << error.col << "] - j [" << error.row << "] - [" << error.absolute << "] " << std::endl;
+	std::cout << "Relative error: " << " i [" << error.col << "] - j [" << error.row << "] - [" << error.relative << "] " << std::endl;
 
+	system("pause");
 }
 
-
-
+Error getError(double** accurateMatrix, double** approximatedMatrix, size_t rows, size_t columns)
+{
+	Error error;
+	for (size_t i = 0; i < rows; ++i) {
+		for (size_t j = 0; j < columns; ++j) {
+			if (fabs(approximatedMatrix[i][j] - accurateMatrix[i][j]) > error.absolute) {
+				error.absolute = fabs(approximatedMatrix[i][j] - accurateMatrix[i][j]);
+				error.row = i;
+				error.col = j;
+			}
+		}
+	}
+	error.relative = error.absolute / accurateMatrix[error.row][error.col];
+	return error;
+}
